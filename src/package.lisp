@@ -5,7 +5,9 @@
                 #:get-texture)
   (:import-from #:lgame.sprite
                 #:.image
-                #:.box)
+                #:.box
+                #:update
+                #:draw)
   (:import-from #:lgame.box
                 #:box-attr
                 #:get-texture-box)

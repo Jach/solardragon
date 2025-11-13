@@ -78,10 +78,12 @@
     (lgame.sprite:set-alpha selected-bg-effect 1.0)
     (setf (.selected-bg-effect self) selected-bg-effect)
     (lgame.sprite:add-sprites (.sprites self)
+                              (make-instance 'starfield)
                               logo
                               ship
                               selected-bg-effect
-                              big-box-sprite)
+                              big-box-sprite
+                              )
     (setf (gethash "bigbox" (.items self)) big-box-sprite)
     (setf (gethash "bigboxes" (.items self)) big-boxes))
 
@@ -121,6 +123,7 @@
     ))
 
 (defmethod scene-update ((self title-scene))
+  (update (.sprites self))
   (incf (.bg-glow self) (* 0.35 (/ 40.0 60.0)))
   (lgame.sprite:set-alpha (.selected-bg-effect self)
                           (/ (* 50.0 (+ 2.5 (sin (.bg-glow self))))
@@ -134,7 +137,7 @@
     (setf (.image big-box-sprite) (aref big-boxes (truncate (.big-box-frame-tick self))))))
 
 (defmethod scene-render ((self title-scene))
-  (lgame.sprite:draw (.sprites self)))
+  (draw (.sprites self)))
 
 (defmethod scene-unload ((self title-scene))
   )

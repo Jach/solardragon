@@ -8,6 +8,8 @@
   :components ((:module "src/"
                 :serial t
                 :components ((:file "package")
+                             (:file "config")
+                             (:file "starfield")
                              (:file "scenes")
                              (:file "main")
                              ))))

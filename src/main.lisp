@@ -1,8 +1,5 @@
 (in-package #:solardragon)
 
-(defparameter *game-width* 800)
-(defparameter *game-height* 600)
-
 (defun assets-dir ()
   (asdf:system-relative-pathname "solardragon" "assets/"))
 
