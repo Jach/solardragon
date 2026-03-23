@@ -7,7 +7,8 @@
                 #:.image
                 #:.box
                 #:update
-                #:draw)
+                #:draw
+                #:kill)
   (:import-from #:lgame.box
                 #:box-attr
                 #:get-texture-box)

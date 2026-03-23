@@ -3,7 +3,7 @@
   :author "Kevin Secretan <jach@thejach.com>"
   :license "LGPL"
 
-  :depends-on ("lgame")
+  :depends-on ("lgame" "closer-mop")
   :serial t
   :components ((:module "src/"
                 :serial t

@@ -4,8 +4,7 @@ For a long time I've wanted to make an arcade style game like [SolarWolf](https:
 
 (You can watch me play SolarWolf somewhat badly [here](https://www.youtube.com/watch?v=PpiQmBPAmOE).
 
-Initially, however, this is just going to begin as a reimplementation of SolarWolf, with its original assets too, but in Common Lisp with my lgame
-library.
+Initially, however, this is just going to begin as a reimplementation of SolarWolf, with its original assets too, but in Common Lisp with my lgame library.
 
 My rough plan is something like this:
 

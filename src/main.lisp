@@ -27,6 +27,9 @@
     (quit)))
 
 (defun quit ()
+  (when *starfield*
+    (lgame.sprite:kill *starfield*)
+    (setf *starfield* nil))
   (lgame:quit))
 
 (defun game-tick ()
@@ -41,6 +44,12 @@
   (lgame.render:clear)
   (scene-render *current-scene*)
   (lgame.render:present)
+
+  (when *scene-ready-to-change*
+    (if (.unloaded? *current-scene*)
+        (set-scene *scene-ready-to-change*)
+
+        (scene-unload *current-scene*)))
 
   (livesupport:update-repl-link)
   (lgame.time:clock-tick 60))

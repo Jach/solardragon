@@ -1,29 +1,62 @@
 (in-package #:solardragon)
 
 (defvar *current-scene* nil)
+(defvar *scene-ready-to-change* nil
+  "NIL if no scene change has been requested, otherwise a keyword identifying the scene to change to.")
+(defvar *scene-state-to-transfer* nil
+  "A plist of scene data that the scene being unloaded thinks the new scene being changed to may want to use.
+   This could also be used for debugging purposes.
+   Its lifetime is valid during a scene change but is reset to NIL after the new current scene has been bound (and constructor run).")
+
+(defvar *starfield* nil
+  "Special game bg that is mainly always present in every scene, just bind it globally after creating it.")
 
 (defun scene-change (scene-key)
-  (when *current-scene*
-    (scene-unload *current-scene*))
-  (setf *current-scene*
-        (case scene-key
-          (:title (make-instance 'title-scene))
-          (t *current-scene*))))
+  "Request a scene change identified by key. The key roughly maps to a class of the name key-scene.
+   Change happens immediately if there's no current scene."
+  (if *current-scene*
+    (setf *scene-ready-to-change* scene-key)
+
+    (set-scene scene-key)))
+
+(defun set-scene (key)
+  (setf *current-scene* (case key
+                          (:title (make-instance 'title-scene))
+                          (:play (make-instance 'play-scene))
+                          (t *current-scene*))
+        *scene-ready-to-change* nil
+        *scene-state-to-transfer* nil))
+
 
 (defgeneric scene-receive-event (scene event)
-  )
+  (:documentation
+    "Called automatically by the main loop's event processing loop, once for each event."))
 
 (defgeneric scene-update (scene)
-  )
+  (:documentation
+    "Called automatically by the main loop once after event processing."))
 
 (defgeneric scene-render (scene)
-  )
+  (:documentation
+    "Called automatically by the main loop once after updating."))
 
 (defgeneric scene-unload (scene)
-  )
+  (:documentation
+    "Called automatically by the main loop when a scene-change has been requested.
+     The implementing method should set the unloaded? slot to t when the scene is fully unloaded to allow the scene change to finalize.
+     But it doesn't have to do so on the first call. If it doesn't, it will be called again in the next frame, and so on, until the unloaded? slot is set.
+     This allows for scene transition effects."))
 
 (defclass scene ()
-  ())
+  ((unloaded? :accessor .unloaded? :initform nil :documentation "Should be set by scene-unload once all unloading/transition effects have taken place."))
+  )
+
+(defmethod scene-receive-event ((self scene) event)
+  "Default implementation does nothing; main loop handles the QUIT event by itself.")
+
+(defmethod scene-unload ((self scene))
+  "Default implementation immediately signals the scene is unloaded."
+  (setf (.unloaded? self) t))
 
 ;;;; Title scene
 
@@ -34,8 +67,8 @@
    (img-unselected :accessor .img-unselected)))
 
 (defmethod initialize-instance :after ((self title-scene-item) &key img-name)
-  (setf (.img-selected self) (get-texture (format nil "menu_~a_on.png" img-name))
-        (.img-unselected self) (get-texture (format nil "menu_~a_off.png" img-name)))
+  (setf (.img-selected self) (lgame.texture:set-alpha (get-texture (format nil "menu_~a_on.png" img-name) :alpha-blending? t) 1)
+        (.img-unselected self) (lgame.texture:set-alpha (get-texture (format nil "menu_~a_off.png" img-name) :alpha-blending? t) 1))
   (setf (.box self) (get-texture-box (.img-selected self)))
   (setf (box-attr (.box self) :topleft) (.pos self))
   (setf (.small-box self) (get-texture-box (.img-unselected self)))
@@ -52,7 +85,6 @@
         (setf (.image self) (.img-unselected self))
         (setf (.box self) (.small-box self)))))
 
-
 (defclass title-scene (scene)
   ((selected-item :accessor .selected-item :initform 0)
    (selected-bg-effect :accessor .selected-bg-effect)
@@ -60,27 +92,38 @@
 
    (big-box-frame-tick :accessor .big-box-frame-tick :initform 0)
 
+   (unload-frames :accessor .unload-frames :initform 13)
+
    (item-names :accessor .item-names :initform #("start" "news" "creds" "setup" "quit"))
    (items :accessor .items :initform (make-hash-table :test #'equal))
+
    (sprites :accessor .sprites :initform (make-instance 'lgame.sprite:ordered-group))))
 
+(defun init-unload-frames ()
+  "Just some MOP wankery to avoid putting the unload-frames initform in its own variable or just typing the value again in scene-unload."
+  (some (lambda (slot) (and (equal 'unload-frames (closer-mop:slot-definition-name slot))
+                            (closer-mop:slot-definition-initform slot)))
+        (closer-mop:class-direct-slots (find-class 'title-scene))))
+
 (defmethod initialize-instance :after ((self title-scene) &key)
-  (let* ((logo (make-instance 'lgame.sprite:sprite :image (get-texture "logo.png")))
-         (ship (make-instance 'lgame.sprite:sprite :image (get-texture "ship-big.png")))
-         (selected-bg-effect (make-instance 'lgame.sprite:sprite :image (get-texture "menu_on_bgd.png")))
-         (big-boxes (lgame.loader:get-texture-frames-from-horizontal-strip "bigboxes.png"))
+  (let* ((logo (make-instance 'lgame.sprite:sprite :image (get-texture "logo.png" :alpha-blending? t)))
+         (ship (make-instance 'lgame.sprite:sprite :image (get-texture "ship-big.png" :alpha-blending? t)))
+         (selected-bg-effect (make-instance 'lgame.sprite:sprite :image (get-texture "menu_on_bgd.png" :alpha-blending? t)))
+         (big-boxes (lgame.loader:get-texture-frames-from-horizontal-strip "bigboxes.png" :alpha-blending? t))
          (big-box-sprite (make-instance 'lgame.sprite:sprite :image (aref big-boxes 0) :box (get-texture-box (aref big-boxes 0) :x 580 :y 80))))
     (setf (.box logo) (get-texture-box (.image logo) :x 30 :y 25)
           (.box ship) (get-texture-box (.image ship) :x 450 :y 250)
           (.box selected-bg-effect) (get-texture-box (.image selected-bg-effect)))
     (lgame.box:inflate-box (.box logo) -2 -2)
-    (lgame.sprite:enable-alpha-blending selected-bg-effect)
+    ;(lgame.sprite:enable-alpha-blending selected-bg-effect)
     (lgame.sprite:set-alpha selected-bg-effect 1.0)
     (setf (.selected-bg-effect self) selected-bg-effect)
+    (unless *starfield*
+      (setf *starfield* (make-instance 'starfield)))
     (lgame.sprite:add-sprites (.sprites self)
-                              (make-instance 'starfield)
+                              ship ; drawn behind starfield in original which gives an interesting effect of seeing stars on the windows
+                              *starfield*
                               logo
-                              ship
                               selected-bg-effect
                               big-box-sprite
                               )
@@ -111,16 +154,23 @@
     (setf (.selected-item self) (position item (.item-names self) :test #'equal))))
 
 (defmethod scene-receive-event ((self title-scene) event)
-  (when (= (event-type event) lgame::+sdl-keydown+)
+  (when (and (= (event-type event) lgame::+sdl-keydown+)
+             (not *scene-ready-to-change*))
     (when (= (key-scancode event) lgame::+sdl-scancode-left+)
       (select-title-item self (aref (.item-names self) (mod (- (.selected-item self) 1) (length (.item-names self))))))
     (when (= (key-scancode event) lgame::+sdl-scancode-right+)
       (select-title-item self (aref (.item-names self) (mod (+ (.selected-item self) 1) (length (.item-names self))))))
     (when (= (key-scancode event) lgame::+sdl-scancode-return+)
-      )
+      (activate-selection self))
     (when (= (key-scancode event) lgame::+sdl-scancode-escape+)
       (lgame.time:clock-stop))
     ))
+
+(defun activate-selection (self)
+  "User has hit enter on a menu item, activate the appropriate scene change."
+  (case (.selected-item self)
+    (0 (scene-change :play)))
+  )
 
 (defmethod scene-update ((self title-scene))
   (update (.sprites self))
@@ -140,4 +190,38 @@
   (draw (.sprites self)))
 
 (defmethod scene-unload ((self title-scene))
+  ;; Transitioning to a new scene results in fading out the title menu options except for the one selected.
+  (when (zerop (.unload-frames self))
+    (call-next-method)) ; unloaded
+  (let ((selected-item-name (aref (.item-names self) (.selected-item self))))
+    (loop for item-name across (.item-names self)
+          unless (equal selected-item-name item-name)
+          do
+          (lgame.sprite:set-alpha (gethash item-name (.items self)) (/ (.unload-frames self) (init-unload-frames)))))
+  (decf (.unload-frames self)))
+
+;;;; Play scene
+
+(defclass play-scene (scene)
+  ((sprites :accessor .sprites :initform (make-instance 'lgame.sprite:ordered-group)))
   )
+
+(defmethod initialize-instance :after ((self play-scene) &key)
+  (lgame.sprite:add-sprites (.sprites self)
+                            *starfield*
+                            ))
+
+(defmethod scene-receive-event ((self play-scene) event)
+  (when (and (= (event-type event) lgame::+sdl-keydown+)
+             (not *scene-ready-to-change*))
+    (when (= (key-scancode event) lgame::+sdl-scancode-escape+)
+      (scene-change :title))))
+
+(defmethod scene-update ((self play-scene))
+  (update (.sprites self))
+  )
+
+(defmethod scene-render ((self play-scene))
+  (draw (.sprites self)))
+
+

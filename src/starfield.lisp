@@ -19,6 +19,7 @@
 
 (defmethod initialize-instance :after ((self starfield) &key)
   (setf (.image self) (lgame.texture:create-empty-sdl-texture lgame:*renderer* lgame::+sdl-textureaccess-target+ *game-width* *game-height*))
+  (lgame.texture:enable-alpha-blending (.image self))
   (setf (.box self) (lgame.box:get-texture-box (.image self)))
 
   (let* ((max-stars (.max-stars self))
@@ -80,3 +81,6 @@
                 (lgame::sdl-render-fill-rect lgame:*renderer* rect)))))
 
     (call-next-method)))
+
+(defmethod kill ((self starfield))
+  (lgame.texture:destroy-texture (.image self)))
