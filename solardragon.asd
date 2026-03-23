@@ -10,6 +10,7 @@
                 :components ((:file "package")
                              (:file "config")
                              (:file "starfield")
+                             (:file "hud")
                              (:file "scenes")
                              (:file "main")
                              ))))

@@ -11,7 +11,10 @@
                 #:kill)
   (:import-from #:lgame.box
                 #:box-attr
-                #:get-texture-box)
+                #:get-texture-box
+                #:box-width
+                #:box-x
+                #:move-box)
   (:import-from #:lgame.event
                 #:event-type
                 #:key-scancode))

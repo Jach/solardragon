@@ -203,17 +203,21 @@
 ;;;; Play scene
 
 (defclass play-scene (scene)
-  ((sprites :accessor .sprites :initform (make-instance 'lgame.sprite:ordered-group)))
-  )
+  ((sprites :accessor .sprites :initform (make-instance 'lgame.sprite:ordered-group))
+   (hud :accessor .hud)
+   ))
 
 (defmethod initialize-instance :after ((self play-scene) &key)
   (lgame.sprite:add-sprites (.sprites self)
                             *starfield*
+                            (setf (.hud self) (make-instance 'hud))
                             ))
 
 (defmethod scene-receive-event ((self play-scene) event)
   (when (and (= (event-type event) lgame::+sdl-keydown+)
              (not *scene-ready-to-change*))
+    (when (= (key-scancode event) lgame::+sdl-scancode-d+)
+      (change-state (.hud self) :draining))
     (when (= (key-scancode event) lgame::+sdl-scancode-escape+)
       (scene-change :title))))
 
