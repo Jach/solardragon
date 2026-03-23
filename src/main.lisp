@@ -30,6 +30,7 @@
   (when *starfield*
     (lgame.sprite:kill *starfield*)
     (setf *starfield* nil))
+  (setf *current-scene* nil)
   (lgame:quit))
 
 (defun game-tick ()

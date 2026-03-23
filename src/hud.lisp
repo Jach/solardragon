@@ -44,6 +44,32 @@
         (.ticks self) 0
         (.elapsed self) 0))
 
+(defmethod (setf .current-level) :after (new-value (self hud))
+  "Redo the list of current-level-imgs to be drawn for the new level number."
+  (let ((roman (format nil "~@R" new-value))
+        (total-width 0)
+        (textures (list))
+        (boxes (list)))
+    (loop for char across roman
+          for key = (string char)
+          for glyph = (gethash key (.level-number-imgs self))
+          for box = (lgame.box:copy-box (gethash key (.level-number-boxes self)))
+          do
+          (incf total-width (box-width box))
+          (push glyph textures)
+          (push box boxes))
+    (setf (.current-level-imgs self) (nreverse textures)
+          (.current-level-boxes self) (nreverse boxes))
+    ;; now adjust box offsets so the center is always at the same spot
+    (let* ((hud-offset (- *game-width* (box-width (.box self))))
+           (full-box (lgame.box:make-box hud-offset 0 total-width 0)))
+      (setf (box-attr full-box :centerx) (+ hud-offset 50))
+      (let ((x-offset (box-x full-box)))
+        (loop for box in (.current-level-boxes self)
+              do
+              (setf (box-attr box :midleft) (list x-offset 565))
+              (incf x-offset (box-width box)))))))
+
 (defmethod update ((self hud))
   (incf (.ticks self))
   (incf (.elapsed self) (lgame.time:dt))
