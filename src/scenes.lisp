@@ -218,6 +218,8 @@
              (not *scene-ready-to-change*))
     (when (= (key-scancode event) lgame::+sdl-scancode-d+)
       (change-state (.hud self) :draining))
+    (when (= (key-scancode event) lgame::+sdl-scancode-h+)
+      (incf (.current-level (.hud self))))
     (when (= (key-scancode event) lgame::+sdl-scancode-escape+)
       (scene-change :title))))
 
