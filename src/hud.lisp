@@ -82,13 +82,15 @@
              (progress (min (/ (.elapsed self) duration) 1.0)))
         (setf (box-x (.box self)) (- start-x (* progress (- start-x target-x))))
         (when (>= (.elapsed self) duration)
+          (send-signal :hud-appeared)
           (change-state self :appearing-lives))))
     (:appearing-lives
       ; initial lives are 3, make them appear one by one in n ticks
-      (when (and (zerop (mod (.ticks self) 26))
+      (when (and (zerop (mod (.ticks self) 20))
                  (< (.lives self) *start-lives*))
         (incf (.lives self)))
       (when (= (.lives self) *start-lives*)
+        (send-signal :hud-lives-loaded)
         (change-state self :filling)))
     (:filling
       (setf (.time-percent self) (/ (.elapsed self) 2.0)) ; 2 secs to fill

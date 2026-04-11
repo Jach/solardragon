@@ -3,14 +3,19 @@
   :author "Kevin Secretan <jach@thejach.com>"
   :license "LGPL"
 
-  :depends-on ("lgame" "closer-mop")
+  :depends-on ("lgame" "closer-mop" "bordeaux-threads")
   :serial t
   :components ((:module "src/"
                 :serial t
                 :components ((:file "package")
                              (:file "config")
+                             (:file "signals")
+                             (:file "anim-ticker")
+
                              (:file "starfield")
                              (:file "hud")
+                             (:file "guardians")
+
                              (:file "scenes")
                              (:file "main")
                              ))))

@@ -56,6 +56,7 @@
 
 (defmethod scene-unload ((self scene))
   "Default implementation immediately signals the scene is unloaded."
+  (clear-signals)
   (setf (.unloaded? self) t))
 
 ;;;; Title scene
@@ -211,7 +212,13 @@
   (lgame.sprite:add-sprites (.sprites self)
                             *starfield*
                             (setf (.hud self) (make-instance 'hud))
-                            ))
+                            )
+  (let ((enemies-group (make-instance 'lgame.sprite:group)))
+    (make-instance 'guardian :position :top :groups (list (.sprites self) enemies-group))
+    (make-instance 'guardian :position :bottom :groups (list (.sprites self) enemies-group))
+    (make-instance 'guardian :position :left :groups (list (.sprites self) enemies-group))
+    (make-instance 'guardian :position :right :groups (list (.sprites self) enemies-group)))
+  )
 
 (defmethod scene-receive-event ((self play-scene) event)
   (when (and (= (event-type event) lgame::+sdl-keydown+)
