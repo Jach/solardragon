@@ -4,27 +4,28 @@
   (asdf:system-relative-pathname "solardragon" "assets/"))
 
 (defun main ()
-  (lgame:init)
+  (lgame:with-overlays
+    (lgame:init)
 
-  (lgame.display:create-window "SolarDragon"
-                               *game-width* *game-height*)
-  (lgame.display:create-renderer)
-  (sdl2:hide-cursor)
-  (sdl2:pump-events)
+    (lgame.display:create-window "SolarDragon"
+                                 *game-width* *game-height*)
+    (lgame.display:create-renderer)
+    (sdl2:hide-cursor)
+    (sdl2:pump-events)
 
-  (lgame.display:set-logical-size *game-width* *game-height*)
+    (lgame.display:set-logical-size *game-width* *game-height*)
 
-  (lgame.loader:create-texture-loader (assets-dir))
+    (lgame.loader:create-texture-loader (assets-dir))
 
-  (scene-change :title)
+    (load-levels)
+    (scene-change :title)
 
-  (lgame.time:clock-start)
-  (unwind-protect
-    (loop while (lgame.time:clock-running?) do
-          (livesupport:continuable
-            (game-tick)))
+    (lgame.time:clock-start)
+    (unwind-protect
+      (loop while (lgame.time:clock-running?) do
+            (game-tick))
 
-    (quit)))
+      (quit))))
 
 (defun quit ()
   (when *starfield*
