@@ -16,7 +16,10 @@
   (.current-level (.hud lvl-objects)))
 
 (defmethod initialize-instance :after ((self level-objects) &key)
-  (let* ((level (aref *level-data* (lvl-num self)))
+  (setup-cube-order self))
+
+(defun setup-cube-order (self)
+  (let* ((level (aref *level-data* (mod (lvl-num self) (length *level-data*))))
          (cubes-to-spawn (alexandria:shuffle (alexandria:hash-table-keys (.cube-locations level)))))
     (setf (.cubes-to-spawn self) cubes-to-spawn)))
 
@@ -30,10 +33,10 @@
         (offset-y 106))
     (values (+ offset-x (* col cell-size))
             (+ offset-y (* row cell-size)))))
-;(cube-grid-pos-to-coords 0 1)
 
 (defmethod update ((self level-objects))
-  (let ((level (aref *level-data* (lvl-num self))))
+  (let* ((level-num (lvl-num self))
+         (level (aref *level-data* (mod level-num (length *level-data*)))))
     (case (.state self)
       (:waiting
         (when (check-signal :hud-lives-loaded) ; show title text and begin spawning in cubes one at a time in ramdom order
@@ -46,7 +49,7 @@
         (alexandria:if-let ((next-cube (pop (.cubes-to-spawn self))))
           (multiple-value-bind (x y) (cube-grid-pos-to-coords (aref next-cube 0) (aref next-cube 1))
             (lgame.sprite:add-sprites (.cubes self)
-                                      (make-instance 'collectable-cube :x x :y y :level (.number level) :cube (get-cube-at level next-cube))))
+                                      (make-instance 'collectable-cube :x x :y y :level level-num :cube (get-cube-at level next-cube))))
 
           (change-state self :waiting-for-player)))
       (:waiting-for-player
@@ -54,6 +57,12 @@
           ; spawn player
           (change-state self :playing)))
       (:playing
+        (alexandria:when-let ((next-level (check-signal :change-level)))
+          ; verify cubes are dead
+          (lgame.sprite:map-sprite #'kill (.cubes self))
+          (setf (.current-level (.hud self)) next-level)
+          (setup-cube-order self)
+          (change-state self :spawning-cubes))
         nil))
 
     (update (.cubes self))
@@ -61,3 +70,5 @@
 
 (defmethod draw ((self level-objects))
   (lgame.sprite:draw (.cubes self)))
+
+;(send-signal :change-level :datum 31 :lifetime ':read-once)

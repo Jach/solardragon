@@ -29,7 +29,7 @@
   datum
   lifetime)
 
-(defun send-signal (signal-id &key datum (lifetime :read-always))
+(defun send-signal (signal-id &key datum (lifetime (or ':read-always ':read-once)))
   (bt:with-lock-held (*signal-holder-lock*)
     (multiple-value-bind (entry found?) (gethash signal-id *signal-holder*)
       (if found?
@@ -50,6 +50,7 @@
               (:read-once (setf (gethash signal-id *signal-holder*) (list new-signal)))))))))
 
 (defun check-signal (signal-id)
+  "If the signal has been sent, then either the datum attached with the signal or T will be returned. Otherwise nil."
   (bt:with-lock-held (*signal-holder-lock*)
     (multiple-value-bind (entry found?) (gethash signal-id *signal-holder*)
       (when found?

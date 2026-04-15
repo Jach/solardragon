@@ -37,7 +37,7 @@
    each entry mapping to :cube or :super-cube.
    "
   (let* ((contents (uiop:read-file-string filename))
-         (levels (cl-ppcre:split "!\\n" contents)))
+         (levels (cl-ppcre:split "\\n!\\n" contents)))
     (loop for level in levels
           for level-number from 0
           do
@@ -98,3 +98,4 @@
   (setf *level-data* (make-array 0 :element-type 'level :adjustable t :fill-pointer 0))
   (let ((file (merge-pathnames "levels.txt" (assets-dir))))
     (parse-levels-file file)))
+
