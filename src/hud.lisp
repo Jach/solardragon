@@ -95,6 +95,7 @@
     (:filling
       (setf (.time-percent self) (/ (.elapsed self) 2.0)) ; 2 secs to fill
       (when (>= (.time-percent self) 1.0)
+        (send-signal :hud-bar-filled)
         (change-state self :waiting)))
     (:draining
       (setf (.time-percent self) (- 1 (/ (.elapsed self) 10.0))) ; 10 secs to drain

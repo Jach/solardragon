@@ -9,14 +9,19 @@
                 :serial t
                 :components ((:file "package")
                              (:file "config")
+                             (:file "levels")
+
                              (:file "signals")
                              (:file "anim-ticker")
 
                              (:file "starfield")
                              (:file "hud")
-                             (:file "guardians")
+                             (:file "message")
 
-                             (:file "levels")
+                             (:file "guardians")
+                             (:file "collectable-cube")
+
+                             (:file "level-objects")
 
                              (:file "scenes")
                              (:file "main")

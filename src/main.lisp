@@ -23,7 +23,8 @@
     (lgame.time:clock-start)
     (unwind-protect
       (loop while (lgame.time:clock-running?) do
-            (game-tick))
+            (livesupport:continuable
+              (game-tick)))
 
       (quit))))
 

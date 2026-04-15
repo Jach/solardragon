@@ -33,23 +33,29 @@
     (case pos
       (:bottom
         (setf (aref (.velocity self) 0) (- guard-speed))
-        (move-box (.box self) (- *game-width* 100 32 64) (- *game-height* (* 2 32))))
+        (setf (box-attr (.box self) :topright) (box-attr *arena-box* :bottomright)))
       (:top
         (setf (aref (.velocity self) 0) guard-speed)
-        (move-box (.box self) (* 2 32) 32)
+        (setf (box-attr (.box self) :bottomleft) (box-attr *arena-box* :topleft))
         (setf (lgame.sprite:.flip self) lgame::+sdl-flip-vertical+))
       (:left
         (setf (aref (.velocity self) 1) (- guard-speed))
-        (move-box (.box self) 32 (/ *game-height* 2))
         (setf (lgame.sprite:.angle self) 90))
       (:right
         (setf (aref (.velocity self) 1) guard-speed)
-        (move-box (.box self) (- *game-width* 100 32 64) (/ *game-height* 2))
         (setf (lgame.sprite:.angle self) -90)))
     (setf (.visual-box self) (lgame.box:copy-box (.box self)))
     (when (or (eql :left pos) (eql :right pos))
-      (rotatef (lgame.box:box-width (.visual-box self))
-               (lgame.box:box-height(.visual-box self))))
+      (rotatef (lgame.box:box-width  (.visual-box self))
+               (lgame.box:box-height (.visual-box self))))
+
+    (when (eql pos :left)
+        (setf (box-attr (.visual-box self) :bottomright) (box-attr *arena-box* :bottomleft))
+        (setf (box-attr (.box self) :center) (box-attr (.visual-box self) :center)))
+
+    (when (eql pos :right)
+        (setf (box-attr (.visual-box self) :topleft) (box-attr *arena-box* :topright))
+        (setf (box-attr (.box self) :center) (box-attr (.visual-box self) :center)))
 
    (lgame.sprite:set-alpha self 0.0)
    ))
@@ -73,7 +79,7 @@
          (change-state self :spawning)))
       ((eql state :spawning)
        (let ((frames (gethash :spawning (/animations self)))
-             (frame-num (truncate (* (.ticks self) 40/60))))
+             (frame-num (truncate (* (.ticks self) +frame-adjust+))))
          (setf (.image self) (aref frames (min frame-num (1- (length frames)))))
          (when (and (plusp frame-num)
                     (zerop (mod frame-num (length frames))))
@@ -85,10 +91,15 @@
        (let ((box (.box self))
              (vbox (.visual-box self)))
          (move self)
-         (when (or (< (box-attr box :left) 32) (> (box-attr box :right) (- *game-width* 100 32))
-                   (< (box-attr vbox :top) 32) (> (box-attr vbox :bottom) (- *game-height* 32)))
-           (setf (aref (.velocity self) 0) (- (aref (.velocity self) 0)))
-           (setf (aref (.velocity self) 1) (- (aref (.velocity self) 1))))
+         (if (member (.guard-position self) '(:top :bottom))
+             (when (or (< (box-attr box :left) (box-attr *arena-box* :left))
+                       (> (box-attr box :right) (box-attr *arena-box* :right)))
+               (setf (aref (.velocity self) 0) (- (aref (.velocity self) 0))))
+
+             (when (or (< (box-attr vbox :top) (box-attr *arena-box* :top))
+                       (> (box-attr vbox :bottom) (box-attr *arena-box* :bottom)))
+               (setf (aref (.velocity self) 1) (- (aref (.velocity self) 1)))))
+
          )))))
 
 ;(defmethod draw ((self guardian))

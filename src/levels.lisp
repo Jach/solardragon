@@ -13,7 +13,7 @@
     (format stream "Number:~a Title:~s Secondary-Title:~s Start:[~a ~a] Cubes:~a"
             (.number lvl) (.title lvl) (.secondary-title lvl) (.start-row lvl) (.start-col lvl) (.cube-locations lvl))))
 
-(defparameter *level-data* (make-array 0 :element-type 'level :adjustable t :fill-pointer 0)
+(defvar *level-data* (make-array 0 :element-type 'level :adjustable t :fill-pointer 0)
   "Growable array of all level data, loaded from levels.txt.")
 
 (defun level-char-to-object (char)
@@ -54,15 +54,15 @@
                   do
                   (cond
                     ;; Title line
-                    ((and (> line-len 1)
+                    ((and (> line-len 0)
                           (eql (char line 0) #\>))
                      (setf title (subseq line 2)))
                     ;; Secondary title line
-                    ((and (> line-len 1)
+                    ((and (> line-len 0)
                           (eql (char line 0) #\<))
                      (setf secondary-title (subseq line 2)))
                     ;; Comment
-                    ((and (> line-len 1)
+                    ((and (> line-len 0)
                           (eql (char line 0) #\;))
                      nil)
                     (t
@@ -77,7 +77,8 @@
                              (when (eql obj :start)
                                (setf start-row row
                                      start-col col))))
-                     (incf row))))
+                     (incf row))
+                    ))
             ;; Finished level object
             (vector-push-extend
               (make-instance 'level
@@ -89,9 +90,9 @@
                              :cube-locations cube-locations)
               *level-data*)))))
 
-(defun get-cube-at (level row col)
-  "Get the cube object at a given row/col on a level."
-  (gethash (vector row col) (.cube-locations level)))
+(defun get-cube-at (level rowcol)
+  "Get the cube object at a given rowcol vector on a level."
+  (gethash rowcol (.cube-locations level)))
 
 (defun load-levels ()
   (setf *level-data* (make-array 0 :element-type 'level :adjustable t :fill-pointer 0))

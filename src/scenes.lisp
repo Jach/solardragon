@@ -201,6 +201,7 @@
           (lgame.sprite:set-alpha (gethash item-name (.items self)) (/ (.unload-frames self) (init-unload-frames)))))
   (decf (.unload-frames self)))
 
+
 ;;;; Play scene
 
 (defclass play-scene (scene)
@@ -212,12 +213,14 @@
   (lgame.sprite:add-sprites (.sprites self)
                             *starfield*
                             (setf (.hud self) (make-instance 'hud))
+                            (make-instance 'level-objects :hud (.hud self))
                             )
   (let ((enemies-group (make-instance 'lgame.sprite:group)))
     (make-instance 'guardian :position :top :groups (list (.sprites self) enemies-group))
     (make-instance 'guardian :position :bottom :groups (list (.sprites self) enemies-group))
     (make-instance 'guardian :position :left :groups (list (.sprites self) enemies-group))
     (make-instance 'guardian :position :right :groups (list (.sprites self) enemies-group)))
+
   )
 
 (defmethod scene-receive-event ((self play-scene) event)
