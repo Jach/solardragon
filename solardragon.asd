@@ -3,7 +3,7 @@
   :author "Kevin Secretan <jach@thejach.com>"
   :license "LGPL"
 
-  :depends-on ("lgame" "closer-mop" "bordeaux-threads")
+  :depends-on ("lgame" "frame-chronicle" "closer-mop" "bordeaux-threads")
   :serial t
   :components ((:module "src/"
                 :serial t
@@ -22,6 +22,8 @@
                              (:file "collectable-cube")
 
                              (:file "level-objects")
+
+                             (:file "player")
 
                              (:file "scenes")
                              (:file "main")

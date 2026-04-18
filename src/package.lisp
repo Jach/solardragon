@@ -1,6 +1,7 @@
 (defpackage #:solardragon
   (:use #:cl)
   (:export #:main)
+  (:local-nicknames (#:fc #:com.thejach.frame-chronicle))
   (:import-from #:lgame.loader
                 #:get-texture)
   (:import-from #:lgame.sprite
@@ -17,5 +18,7 @@
                 #:move-box)
   (:import-from #:lgame.event
                 #:event-type
-                #:key-scancode))
+                #:key-scancode)
+  (:import-from #:alexandria
+                #:when-let))
 

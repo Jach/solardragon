@@ -20,7 +20,7 @@
 (defmethod initialize-instance :after ((self guardian) &key)
   (let ((anims (/animations self))
         (pos (.guard-position self))
-        (guard-speed (* 4 (/ 40.0 60.0))))
+        (guard-speed (* 4 +frame-adjust+)))
     (when (or (zerop (hash-table-count anims))
               (lgame.texture:.destroyed? (aref (gethash :spawning anims) 0))) ; our job to fully (re)initialize it
       (setf (gethash :spawning anims) (lgame.loader:get-texture-frames-from-horizontal-strip "baddie-teleport.png" :frame-width 64 :alpha-blending? t)

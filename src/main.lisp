@@ -20,6 +20,7 @@
     (load-levels)
     (scene-change :title)
 
+    (fc:make-store :sample-on-function (lambda (frame) (declare (ignore frame)) *fc-enabled?*))
     (lgame.time:clock-start)
     (unwind-protect
       (loop while (lgame.time:clock-running?) do
@@ -55,6 +56,7 @@
         (scene-unload *current-scene*)))
 
   (livesupport:update-repl-link)
+  (fc:frame-tick)
   (lgame.time:clock-tick 60))
 
 (eval-when (:execute)

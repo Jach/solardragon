@@ -214,6 +214,7 @@
                             *starfield*
                             (setf (.hud self) (make-instance 'hud))
                             (make-instance 'level-objects :hud (.hud self))
+                            (make-instance 'player)
                             )
   (let ((enemies-group (make-instance 'lgame.sprite:group)))
     (make-instance 'guardian :position :top :groups (list (.sprites self) enemies-group))

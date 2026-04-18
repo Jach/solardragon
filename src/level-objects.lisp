@@ -12,8 +12,8 @@
    (cubes-to-spawn :accessor .cubes-to-spawn :initform (list))
    ))
 
-(defun lvl-num (lvl-objects)
-  (.current-level (.hud lvl-objects)))
+(defun lvl-num (self)
+  (.current-level (.hud self)))
 
 (defmethod initialize-instance :after ((self level-objects) &key)
   (setup-cube-order self))
@@ -51,13 +51,14 @@
             (lgame.sprite:add-sprites (.cubes self)
                                       (make-instance 'collectable-cube :x x :y y :level level-num :cube (get-cube-at level next-cube))))
 
-          (change-state self :waiting-for-player)))
+          (let ((player-pos (multiple-value-list (cube-grid-pos-to-coords (.start-row level) (.start-col level)))))
+            (send-signal :spawn-player :datum player-pos :lifetime ':read-once)
+            (change-state self :waiting-for-player))))
       (:waiting-for-player
-        (when (check-signal :hud-bar-filled)
-          ; spawn player
+        (when (and (check-signal :hud-bar-filled) (check-signal :player-spawned))
           (change-state self :playing)))
       (:playing
-        (alexandria:when-let ((next-level (check-signal :change-level)))
+        (when-let ((next-level (check-signal :change-level)))
           ; verify cubes are dead
           (lgame.sprite:map-sprite #'kill (.cubes self))
           (setf (.current-level (.hud self)) next-level)
@@ -72,3 +73,4 @@
   (lgame.sprite:draw (.cubes self)))
 
 ;(send-signal :change-level :datum 31 :lifetime ':read-once)
+(aref *level-data* 0)
