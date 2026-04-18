@@ -20,5 +20,6 @@
                 #:event-type
                 #:key-scancode)
   (:import-from #:alexandria
-                #:when-let))
+                #:when-let
+                #:if-let))
 

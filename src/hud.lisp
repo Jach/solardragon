@@ -1,6 +1,6 @@
 (in-package #:solardragon)
 
-(defclass hud (lgame.sprite:sprite)
+(defclass hud (lgame.sprite:sprite animation-ticker)
   ((time-empty-img :accessor .time-empty-img)
    (time-full-img :accessor .time-full-img)
    (mini-ship-img :accessor .mini-ship-img)
@@ -14,9 +14,9 @@
            then transition to the :filling state. The :filling state fills the time bar up to max, then transitions to the :waiting state. ?
            In the :draining state, the skip-a-level bar drains as time passes.")
 
-   (ticks :accessor .ticks :initform 0) ; essentially how many frames have passed to control speed of effects, can be reset on state transitions
-   (elapsed :accessor .elapsed :initform 0.0) ; cumulative time, can be easier to reason with than frame ticks
    (time-percent :accessor .time-percent :initform 0.0) ; how full the time meter is
+   (fill-duration :accessor .fill-duration :initform 2.0)
+   (drain-duration :accessor .drain-duration :initform 10.0)
 
    (lives :accessor .lives :initform 0)
    (current-level :accessor .current-level :initform 0)
@@ -39,10 +39,16 @@
            (.level-number-imgs self))
   (move-box (.box self) *game-width* 0))
 
-(defmethod change-state ((self hud) state)
-  (setf (.state self) state
-        (.ticks self) 0
-        (.elapsed self) 0))
+(defmethod change-state :before (obj new-state)
+  (fc:record :state-change (list (class-of obj) :from (.state obj) :to new-state)))
+
+(defmethod change-state ((self hud) new-state)
+  (if (and (eql new-state :filling)
+           (eql (.state self) :draining)) ; allow for refill to resume from where draining left off...
+      (setf (.elapsed self) (* (.fill-duration self) (.time-percent self))
+            (.ticks self) 0)
+      (reset-ticks self))
+  (setf (.state self) new-state))
 
 (defmethod (setf .current-level) :after (new-value (self hud))
   "Redo the list of current-level-imgs to be drawn for the new level number."
@@ -71,8 +77,7 @@
               (incf x-offset (box-width box)))))))
 
 (defmethod update ((self hud))
-  (incf (.ticks self))
-  (incf (.elapsed self) (lgame.time:dt))
+  (tick self)
   (case (.state self)
     (:appearing
       ; hud img is 100 px wide, so we want to move it left 100 px within some duration
@@ -91,17 +96,23 @@
         (incf (.lives self)))
       (when (= (.lives self) *start-lives*)
         (send-signal :hud-lives-loaded)
-        (change-state self :filling)))
+        (change-state self :waiting)))
     (:filling
-      (setf (.time-percent self) (/ (.elapsed self) 2.0)) ; 2 secs to fill
+      (setf (.time-percent self) (/ (.elapsed self) (.fill-duration self))) ; n secs to fill
       (when (>= (.time-percent self) 1.0)
-        (send-signal :hud-bar-filled)
+        (send-signal :hud-bar-filled :lifetime ':read-once)
         (change-state self :waiting)))
     (:draining
-      (setf (.time-percent self) (- 1 (/ (.elapsed self) 10.0))) ; 10 secs to drain
+      (setf (.time-percent self) (- 1 (/ (.elapsed self) (.drain-duration self)))) ; n secs to drain
       (when (<= (.time-percent self) 0.0)
         (change-state self :waiting)))
-    ))
+    (:waiting
+      (when (check-signal :start-timer)
+        (change-state self :draining)))
+    )
+  (when (check-signal :spawning-new-level-cubes)
+    (change-state self :filling))
+  )
 
 (defmethod draw ((self hud))
   (let ((box (.box self))

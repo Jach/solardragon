@@ -10,13 +10,15 @@
    (rotation-speed :accessor .rotation-speed :initform (+ 1.5 (random 2.5)))
    (rotation :accessor .rotation :initform (random 90.0))
 
+   (player :accessor .player :initarg :player)
+
    (cube-animation-green :accessor /cube-animation-green :allocation :class :initform nil)
    (cube-animation-red :accessor /cube-animation-red :allocation :class :initform nil)
    (cube-animation-yellow :accessor /cube-animation-yellow :allocation :class :initform nil)
    (cube-animation-white :accessor /cube-animation-white :allocation :class :initform nil)
    ))
 
-(defmethod initialize-instance :after ((self collectable-cube) &key x y level cube)
+(defmethod initialize-instance :after ((self collectable-cube) &key x y level cube-type)
   (when (or (null (/cube-animation-green self))
             (lgame.texture:.destroyed? (aref (/cube-animation-green self) 0)))
     (setf (/cube-animation-green self) (lgame.loader:get-texture-frames-from-horizontal-strip "boxes.png")
@@ -27,7 +29,7 @@
   (when (zerop (random 2))
     (setf (.rotation-speed self) (- (.rotation-speed self))))
   (let ((hp 1))
-    (when (eql :super-cube cube)
+    (when (eql :super-cube cube-type)
       (incf hp))
     (when (>= level (/ (length *level-data*) 2)) ; second half
       (incf hp))
@@ -58,11 +60,11 @@
   (when (plusp (.collecting-frames self))
     (decf (.collecting-frames self)))
   ;; check collision with player (and player must move off
-  (let ((player-collide? nil)) ; (lgame.box:boxes-collide? (.box self) (.box (.player self)))
+  (let ((player-collide? (lgame.box:boxes-collide? (.box self) (.box (.player self)))))
     (when (and player-collide? (.player-moved-off self))
       (setf (.player-moved-off self) nil)
       (decf (.hp self))
-      (setf (.collecting-frames self) 2))
+      (setf (.collecting-frames self) 3))
     (when (and (not player-collide?) (not (.player-moved-off self)))
       (setf (.player-moved-off self) t)))
   ;; check death

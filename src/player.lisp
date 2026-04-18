@@ -1,9 +1,9 @@
 (in-package #:solardragon)
 
 (defclass player (animation-ticker lgame.sprite:sprite)
-  ((movement-vec :accessor .movement-vec :initform #(0 0))
+  ((movement-vec :accessor .movement-vec :initform (vector 0 0))
    (unmoved? :accessor .unmoved? :initform t)
-   (state :accessor .state :initform ':waiting :type (member :waiting :spawning :playing :teleporting :exploding))
+   (state :accessor .state :initform ':waiting :type (member :waiting :spawning :playing :warping :exploding))
 
    (shield-frame :accessor .shield-frame :initform 0 :documentation "If the shield powerup is active, this will be non-zero, representing the shield frame to draw around the ship (in 1-based indexing)")
    (bullet-time-frame :accessor .bullet-time-frame :initform 0 :documentation "If the bullet-time powerup is active, this will be non-zero, representing the bullet time effect frame to draw around the ship (in 1-based indexing)")
@@ -46,15 +46,20 @@
   (update (.smoke-trail-sprites self))
   (case (.state self)
     (:waiting
-      (alexandria:when-let ((start-pos (check-signal :spawn-player)))
+      (when-let ((start-pos (check-signal :spawn-player)))
         (setf (box-attr (.box self) :topleft) start-pos)
         (change-state self :spawning)))
     (:spawning
       (let ((frame (truncate (* (.ticks self) +frame-adjust+))))
-        (setf (.image self) (aref (/teleport-animations self) frame))
-        (when (= frame (1- (length (/teleport-animations self))))
-          (send-signal :player-spawned)
-          (change-state self :playing))))
+        (if (>= frame (length (/teleport-animations self)))
+            (progn
+              (setf (.image self) (.ship-up-img self))
+              (when (check-signal :start-player)
+                (change-state self :playing)))
+            (progn
+              (setf (.image self) (aref (/teleport-animations self) frame))
+              (when (= frame (1- (length (/teleport-animations self))))
+                (send-signal :player-spawned :lifetime ':read-once))))))
     (:playing
       (cond
         ((lgame.event:key-pressed? :key lgame::+sdl-scancode-left+)
@@ -101,9 +106,22 @@
         (setf (.image self) (if (.unmoved? self)
                                 (.ship-up-img self)
                                 (aref (if turbo? (/turbo-animations self) (/engine-animations self)) frame)))
+
+        (when (check-signal :cubes-collected)
+          (change-state self :warping))
         ))
-    (:teleporting
-      )
+    (:warping
+      (setf (lgame.sprite:.flip self) lgame::+sdl-flip-none+
+            (lgame.sprite:.angle self) 0
+            (.unmoved? self) t
+            (.movement-vec self) (vector 0 0))
+      (move-box (.box self) 2 -1)
+      (let ((frame (truncate (* (.ticks self) +frame-adjust+))))
+        (if (= frame (length (/warp-animations self)))
+            (progn
+              (send-signal :change-level :lifetime ':read-once)
+              (change-state self :waiting))
+            (setf (.image self) (aref (/warp-animations self) frame)))))
     (:exploding
       ))
   )

@@ -207,14 +207,16 @@
 (defclass play-scene (scene)
   ((sprites :accessor .sprites :initform (make-instance 'lgame.sprite:ordered-group))
    (hud :accessor .hud)
+   (player :accessor .player)
    ))
 
 (defmethod initialize-instance :after ((self play-scene) &key)
+  (setf (.player self) (make-instance 'player))
   (lgame.sprite:add-sprites (.sprites self)
                             *starfield*
                             (setf (.hud self) (make-instance 'hud))
-                            (make-instance 'level-objects :hud (.hud self))
-                            (make-instance 'player)
+                            (make-instance 'level-objects :hud (.hud self) :player (.player self))
+                            (.player self)
                             )
   (let ((enemies-group (make-instance 'lgame.sprite:group)))
     (make-instance 'guardian :position :top :groups (list (.sprites self) enemies-group))

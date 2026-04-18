@@ -4,10 +4,11 @@
 
 (defclass level-objects (lgame.sprite:sprite)
   ((hud :accessor .hud :initarg :hud)
+   (player :accessor .player :initarg :player)
    (cubes :accessor .cubes :initform (make-instance 'lgame.sprite:group))
    (title-text :accessor .title-text :initform nil)
 
-   (state :accessor .state :initform :waiting :type (member :waiting :spawning-cubes :waiting-for-player :playing))
+   (state :accessor .state :initform :waiting :type (member :waiting :spawning-cubes :waiting-for-player :playing :level-transition))
 
    (cubes-to-spawn :accessor .cubes-to-spawn :initform (list))
    ))
@@ -43,26 +44,37 @@
           (unless (.title-text self)
             ; should also spawn 'Begin' for special case of first level...
             (setf (.title-text self) 1)); (make-instance 'message :text (.title or secondary-title if mirrored.. level)
+          (send-signal :spawning-new-level-cubes :lifetime ':read-once)
           (change-state self :spawning-cubes)
           ))
       (:spawning-cubes
-        (alexandria:if-let ((next-cube (pop (.cubes-to-spawn self))))
+        (if-let ((next-cube (pop (.cubes-to-spawn self))))
           (multiple-value-bind (x y) (cube-grid-pos-to-coords (aref next-cube 0) (aref next-cube 1))
             (lgame.sprite:add-sprites (.cubes self)
-                                      (make-instance 'collectable-cube :x x :y y :level level-num :cube (get-cube-at level next-cube))))
+                                      (make-instance 'collectable-cube :x x :y y :level level-num :cube-type (get-cube-at level next-cube) :player (.player self))))
 
           (let ((player-pos (multiple-value-list (cube-grid-pos-to-coords (.start-row level) (.start-col level)))))
             (send-signal :spawn-player :datum player-pos :lifetime ':read-once)
-            (change-state self :waiting-for-player))))
+            (change-state self :waiting-for-hud))))
+      (:waiting-for-hud
+        (when (check-signal :hud-bar-filled)
+          (change-state self :waiting-for-player)))
       (:waiting-for-player
-        (when (and (check-signal :hud-bar-filled) (check-signal :player-spawned))
+        (when (check-signal :player-spawned)
+          (send-signal :start-timer :lifetime ':read-once) ; once for timer
+          (send-signal :start-player :lifetime ':read-once) ; once for player...
           (change-state self :playing)))
       (:playing
+        (when (zerop (lgame.sprite:sprite-count (.cubes self)))
+          (send-signal :cubes-collected :lifetime ':read-once)
+          (change-state self :level-transition)))
+      (:level-transition
         (when-let ((next-level (check-signal :change-level)))
-          ; verify cubes are dead
-          (lgame.sprite:map-sprite #'kill (.cubes self))
-          (setf (.current-level (.hud self)) next-level)
+          (if (numberp next-level)
+              (setf (.current-level (.hud self)) next-level)
+              (incf (.current-level (.hud self))))
           (setup-cube-order self)
+          (send-signal :spawning-new-level-cubes :lifetime ':read-once)
           (change-state self :spawning-cubes))
         nil))
 
@@ -71,6 +83,3 @@
 
 (defmethod draw ((self level-objects))
   (lgame.sprite:draw (.cubes self)))
-
-;(send-signal :change-level :datum 31 :lifetime ':read-once)
-(aref *level-data* 0)

@@ -12,7 +12,7 @@
                              (:file "levels")
 
                              (:file "signals")
-                             (:file "anim-ticker")
+                             (:file "animation-ticker")
 
                              (:file "starfield")
                              (:file "hud")
