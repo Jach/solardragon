@@ -9,5 +9,6 @@
 (defconstant +frame-adjust+ (/ 40.0 60.0)) ; since original ran at 40fps and we run at 60, sometimes need to multiply by this constant...
 
 (defvar *debug* nil)
+(defvar *debug-frame-step* nil)
 (defvar *fc-enabled?* t)
 

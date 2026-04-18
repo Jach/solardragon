@@ -37,27 +37,41 @@
   (lgame:quit))
 
 (defun game-tick ()
-  (lgame.event:do-event (event)
-    (when (= (event-type event) lgame::+sdl-quit+)
-      (lgame.time:clock-stop))
+  (let ((advance-key-released? nil)
+        (events-on-hold (list)))
+    (lgame.event:do-event (event)
+      (when (= (event-type event) lgame::+sdl-quit+)
+        (lgame.time:clock-stop))
+      (when (= (event-type event) lgame::+sdl-keydown+)
+        (when (= (key-scancode event) lgame::+sdl-scancode-p+)
+          (setf *debug-frame-step* (not *debug-frame-step*))))
+      (when (= (event-type event) lgame::+sdl-keyup+)
+        (when (= (key-scancode event) lgame::+sdl-scancode-n+)
+          (setf advance-key-released? t)))
 
-    (scene-receive-event *current-scene* event))
+      (if *debug-frame-step*
+          (push event events-on-hold)
+          (scene-receive-event *current-scene* event)))
 
-  (scene-update *current-scene*)
+    (if (or (not *debug-frame-step*) advance-key-released?)
+        (progn
+          (scene-update *current-scene*)
 
-  (lgame.render:clear)
-  (scene-render *current-scene*)
-  (lgame.render:present)
+          (lgame.render:clear)
+          (scene-render *current-scene*)
+          (lgame.render:present)
 
-  (when *scene-ready-to-change*
-    (if (.unloaded? *current-scene*)
-        (set-scene *scene-ready-to-change*)
+          (when *scene-ready-to-change*
+            (if (.unloaded? *current-scene*)
+                (set-scene *scene-ready-to-change*)
 
-        (scene-unload *current-scene*)))
+                (scene-unload *current-scene*)))
 
-  (livesupport:update-repl-link)
-  (fc:frame-tick)
-  (lgame.time:clock-tick 60))
+          (livesupport:update-repl-link)
+          (fc:frame-tick)
+          (lgame.time:clock-tick 60))
+
+        (livesupport:update-repl-link))))
 
 (eval-when (:execute)
   (main))

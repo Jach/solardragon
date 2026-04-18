@@ -17,6 +17,7 @@
    (time-percent :accessor .time-percent :initform 0.0) ; how full the time meter is
    (fill-duration :accessor .fill-duration :initform 2.0)
    (drain-duration :accessor .drain-duration :initform 10.0)
+   (drain-speed-mod :accessor .drain-speed-mod :initform 1.0)
 
    (lives :accessor .lives :initform 0)
    (current-level :accessor .current-level :initform 0)
@@ -43,11 +44,7 @@
   (fc:record :state-change (list (class-of obj) :from (.state obj) :to new-state)))
 
 (defmethod change-state ((self hud) new-state)
-  (if (and (eql new-state :filling)
-           (eql (.state self) :draining)) ; allow for refill to resume from where draining left off...
-      (setf (.elapsed self) (* (.fill-duration self) (.time-percent self))
-            (.ticks self) 0)
-      (reset-ticks self))
+  (reset-ticks self)
   (setf (.state self) new-state))
 
 (defmethod (setf .current-level) :after (new-value (self hud))
@@ -100,18 +97,15 @@
     (:filling
       (setf (.time-percent self) (/ (.elapsed self) (.fill-duration self))) ; n secs to fill
       (when (>= (.time-percent self) 1.0)
+        (setf (.drain-speed-mod self) 1.0)
         (send-signal :hud-bar-filled :lifetime ':read-once)
         (change-state self :waiting)))
     (:draining
-      (setf (.time-percent self) (- 1 (/ (.elapsed self) (.drain-duration self)))) ; n secs to drain
+      (setf (.time-percent self) (- 1 (/ (.elapsed self) (* (.drain-speed-mod self) (.drain-duration self))))) ; n secs to drain
       (when (<= (.time-percent self) 0.0)
         (change-state self :waiting)))
     (:waiting
-      (when (check-signal :start-timer)
-        (change-state self :draining)))
-    )
-  (when (check-signal :spawning-new-level-cubes)
-    (change-state self :filling))
+      nil))
   )
 
 (defmethod draw ((self hud))
