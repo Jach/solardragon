@@ -15,7 +15,7 @@
            In the :draining state, the skip-a-level bar drains as time passes.")
 
    (time-percent :accessor .time-percent :initform 0.0) ; how full the time meter is
-   (fill-duration :accessor .fill-duration :initform 2.0)
+   (fill-duration :accessor .fill-duration :initform 1.2)
    (drain-duration :accessor .drain-duration :initform 10.0)
    (drain-speed-mod :accessor .drain-speed-mod :initform 1.0)
 

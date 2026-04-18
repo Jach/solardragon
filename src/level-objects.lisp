@@ -6,7 +6,9 @@
   ((hud :accessor .hud :initarg :hud)
    (player :accessor .player :initarg :player)
    (cubes :accessor .cubes :initform (make-instance 'lgame.sprite:group))
-   (title-text :accessor .title-text :initform nil)
+   (popped-cubes :accessor .popped-cubes :initform (make-instance 'lgame.sprite:group))
+   (messages :accessor .messages :initform (make-instance 'lgame.sprite:ordered-group))
+
    (skip-after-spawning? :accessor .skip-after-spawning? :initform nil)
 
    (state :accessor .state :initform :waiting :type (member :waiting :spawning-cubes :waiting-for-player :playing :level-transition))
@@ -31,6 +33,10 @@
   (reset-ticks self)
   (setf (.state self) state))
 
+(defun toast (self msg)
+  (let ((message (make-instance 'message :text msg)))
+    (lgame.sprite:add-sprites (.messages self) message)))
+
 (defun cube-grid-pos-to-coords (row col)
   "Returns pixel x,y as multiple values for the top left coordinate of the row and col given by the 7x9 cube grid"
   (let ((cell-size 58)
@@ -43,17 +49,23 @@
   (tick self)
   (let* ((level-num (lvl-num self))
          (hud (.hud self))
-         (level (aref *level-data* (mod level-num (length *level-data*)))))
+         (mirrored?-data-level-num (multiple-value-list (truncate level-num (length *level-data*))))
+         (mirrored? (eql 1 (first mirrored?-data-level-num)))
+         (data-level-num (second mirrored?-data-level-num))
+         (level (aref *level-data* data-level-num)))
     (case (.state self)
       (:waiting
         (when (check-signal :hud-lives-loaded) ; show title text and begin spawning in cubes one at a time in ramdom order
-          (unless (.title-text self)
-            ; should also spawn 'Begin' for special case of first level...
-            (setf (.title-text self) 1)); (make-instance 'message :text (.title or secondary-title if mirrored.. level)
           (change-state hud :filling)
           (change-state self :spawning-cubes)
+          (toast self "Begin")
           ))
       (:spawning-cubes
+        (when (= (.ticks self) 1)
+          (if mirrored?
+              (toast self (.secondary-title level))
+              (toast self (.title level)))
+          )
         (when (>= (.elapsed self) (.cube-spawn-time self))
           (decf (.elapsed self) (.cube-spawn-time self))
           (if-let ((next-cube (pop (.cubes-to-spawn self))))
@@ -63,13 +75,16 @@
 
             (if (.skip-after-spawning? self)
                 (progn
-                  (setf (.skip-after-spawning? self) nil)
-                  (setup-cube-order self)
-                  (let ((progress (- 1.0 (.time-percent hud))))
-                    (change-state hud :draining)
-                    (setf (.drain-speed-mod hud) 0.2)
-                    (setf (.elapsed hud) (* progress 0.2 (.drain-duration hud))))
-                  (change-state self :despawning-cubes))
+                  (when (lgame.sprite:empty? (.messages self)) ; ensure stage title is gone...
+                    (setf (.skip-after-spawning? self) nil)
+                    (setup-cube-order self)
+                    (let ((progress (- 1.0 (.time-percent hud))))
+                      (change-state hud :draining)
+                      (setf (.drain-speed-mod hud) 0.2)
+                      (setf (.elapsed hud) (* progress 0.2 (.drain-duration hud))))
+                    (toast self "Level Skipped")
+                    (change-state self :despawning-cubes)))
+
                 (let ((player-pos (multiple-value-list (cube-grid-pos-to-coords (.start-row level) (.start-col level)))))
                   (send-signal :spawn-player :datum player-pos :lifetime ':read-once)
                   (change-state self :waiting-for-hud))))))
@@ -78,11 +93,13 @@
           (decf (.elapsed self) (.cube-spawn-time self))
           (if (not (lgame.sprite:empty? (.cubes self)))
               (let ((cube (lgame.sprite:pop-sprite (.cubes self))))
+                (lgame.sprite:add-sprites (.popped-cubes self) cube)
                 (cube-hit cube)
                 (setf (.hp cube) 0))
               (progn
-                (send-signal :change-level :datum :skipped-last :lifetime ':read-once)
-                (change-state self :level-transition))))
+                (when (lgame.sprite:empty? (.messages self)) ; ensure level skipped text is gone
+                  (send-signal :change-level :datum :skipped-last :lifetime ':read-once)
+                  (change-state self :level-transition)))))
         )
       (:waiting-for-hud
         (when (check-signal :hud-bar-filled)
@@ -111,7 +128,11 @@
             (change-state self :spawning-cubes)))))
 
     (update (.cubes self))
+    (update (.popped-cubes self))
+    (update (.messages self))
     ))
 
 (defmethod draw ((self level-objects))
-  (lgame.sprite:draw (.cubes self)))
+  (lgame.sprite:draw (.cubes self))
+  (lgame.sprite:draw (.popped-cubes self))
+  (lgame.sprite:draw (.messages self)))

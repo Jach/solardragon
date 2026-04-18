@@ -58,15 +58,6 @@
       (t
        (/cube-animation-green self)))))
 
-;*debug*
-;;(.image *debug*)
-;(.box *debug*)
-;(/cube-popped *debug*)
-;(<= 0 (.popping-duration *debug*))
-;(lgame.render:with-draw-color (255 255 255)
-;  (lgame.render:clear)
-;  (lgame.render:blit (.image *debug*) (.box *debug*))
-;  (lgame.render:present))
 (defun cube-hit (self)
   (setf (.player-moved-off self) nil)
   (decf (.hp self))
