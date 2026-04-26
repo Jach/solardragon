@@ -24,6 +24,7 @@
     (lgame.time:clock-start)
     (unwind-protect
       (loop while (lgame.time:clock-running?) do
+            (livesupport:update-repl-link)
             (livesupport:continuable
               (game-tick)))
 
@@ -71,7 +72,7 @@
           (fc:frame-tick)
           (lgame.time:clock-tick 60))
 
-        (livesupport:update-repl-link))))
+        )))
 
 (eval-when (:execute)
   (main))

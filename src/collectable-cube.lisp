@@ -92,4 +92,3 @@
         (let* ((frames (pick-animation-set self))
                (frame-num (mod (+ (truncate (.rotation self)) (.offset-frames self)) (length frames))))
           (setf (.image self) (aref frames frame-num))))))
-
